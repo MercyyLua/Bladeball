@@ -1,0 +1,134 @@
+local Player = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Vim = game:GetService("VirtualInputManager")
+
+-- GUI Setup
+local ScreenGui = Instance.new("ScreenGui", Player:WaitForChild("PlayerGui"))
+ScreenGui.Name = "BladeBallAutoHub"
+ScreenGui.ResetOnSpawn = false
+
+-- Toggle Button
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0, 120, 0, 40)
+ToggleButton.Position = UDim2.new(0, 10, 0.5, -20)
+ToggleButton.Text = "Toggle UI"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 14
+ToggleButton.BorderSizePixel = 0
+ToggleButton.AutoButtonColor = true
+ToggleButton.ZIndex = 10
+
+-- Main Frame
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 400, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 12)
+
+ToggleButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Notification Function
+local function Notify(msg)
+	pcall(function()
+		game.StarterGui:SetCore("SendNotification", {
+			Title = "Blade Ball Auto Hub",
+			Text = msg,
+			Duration = 2
+		})
+	end)
+end
+
+-- Tabs
+local tabNames = {"Combat", "Visual", "Credits"}
+local tabs, frames = {}, {}
+for i, name in ipairs(tabNames) do
+	local tabBtn = Instance.new("TextButton", MainFrame)
+	tabBtn.Size = UDim2.new(0, 100, 0, 26)
+	tabBtn.Position = UDim2.new(0, 10 + (i-1)*110, 0, 35)
+	tabBtn.Text = name
+	tabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	tabBtn.TextColor3 = Color3.new(1,1,1)
+	tabBtn.Font = Enum.Font.Gotham
+	tabBtn.TextSize = 13
+	tabs[name] = tabBtn
+
+	local frame = Instance.new("ScrollingFrame", MainFrame)
+	frame.Size = UDim2.new(1, -20, 1, -70)
+	frame.Position = UDim2.new(0, 10, 0, 65)
+	frame.BackgroundTransparency = 1
+	frame.Visible = (i == 1)
+	frame.CanvasSize = UDim2.new(0, 0, 0, 200)
+	frame.ScrollBarThickness = 4
+	frames[name] = frame
+
+	tabBtn.MouseButton1Click:Connect(function()
+		for _, f in pairs(frames) do f.Visible = false end
+		frame.Visible = true
+	end)
+end
+
+-- Auto Parry Toggle Button
+local parryBtn = Instance.new("TextButton", frames.Combat)
+parryBtn.Size = UDim2.new(0, 180, 0, 30)
+parryBtn.Position = UDim2.new(0, 10, 0, 0)
+parryBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+parryBtn.TextColor3 = Color3.new(1,1,1)
+parryBtn.Font = Enum.Font.Gotham
+parryBtn.TextSize = 13
+parryBtn.Text = "Auto Parry: OFF"
+local parryEnabled = false
+parryBtn.MouseButton1Click:Connect(function()
+	parryEnabled = not parryEnabled
+	parryBtn.Text = "Auto Parry: " .. (parryEnabled and "ON" or "OFF")
+	Notify("Auto Parry " .. (parryEnabled and "Enabled" or "Disabled"))
+end)
+
+-- Credits
+local creditText = Instance.new("TextLabel", frames.Credits)
+creditText.Size = UDim2.new(1, -20, 0, 120)
+creditText.Position = UDim2.new(0, 10, 0, 10)
+creditText.BackgroundTransparency = 1
+creditText.TextColor3 = Color3.fromRGB(255, 255, 255)
+creditText.Font = Enum.Font.GothamSemibold
+creditText.TextSize = 16
+creditText.TextWrapped = true
+creditText.Text = "Script by: Mercyy\nHub Owner: Dixel"
+creditText.TextYAlignment = Enum.TextYAlignment.Top
+
+-- Main Logic
+RunService.RenderStepped:Connect(function()
+	if not parryEnabled then return end
+
+	local char = Player.Character
+	local HRP = char and char:FindFirstChild("HumanoidRootPart")
+	if not HRP then return end
+
+	local Ball
+	for _, b in pairs(workspace.Balls:GetChildren()) do
+		if b:GetAttribute("realBall") then
+			Ball = b
+			break
+		end
+	end
+
+	if Ball and Ball:GetAttribute("target") == Player.Name then
+		local speed = Ball.zoomies.VectorVelocity.Magnitude
+		local dist = (HRP.Position - Ball.Position).Magnitude
+		if dist / speed <= 0.55 then
+			Vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+			task.wait()
+			Vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+		end
+	end
+end)
